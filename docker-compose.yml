@@ -1,0 +1,55 @@
+version: '2.3'
+
+services:
+  tf-serving:
+
+    # https://hub.docker.com/r/yutkin/tfserving/
+    image: yutkin/tfserving:resnet32
+
+    runtime: nvidia
+    networks:
+    - frontend
+
+  pytorch-chatbot:
+    build: ./pytorch_chatbot
+    networks:
+      - frontend
+
+  vkbot:
+    build: .
+    command: supervisord -c /app/etc/supervisord.ini
+    networks:
+      - frontend
+    environment:
+      - PYTHONASYNCIODEBUG=0
+      - VK_APP_SECRET
+      - VK_ACCESS_TOKEN
+      - SENTRY_DSN
+    volumes:
+      - ./vkbot:/app/vkbot
+      - ./etc:/app/etc
+      - ./tests:/app/tests
+      - aiohttp-sockets:/var/lib/aiohttp
+    depends_on:
+      - tf-serving
+      - pytorch-chatbot
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - 80:80
+    environment:
+      - TZ=Europe/Moscow
+    networks:
+      - frontend
+    volumes:
+      - ./etc/nginx.conf:/etc/nginx/nginx.conf
+      - aiohttp-sockets:/var/lib/aiohttp
+    depends_on:
+      - vkbot
+
+networks:
+  frontend:
+
+volumes:
+  aiohttp-sockets:

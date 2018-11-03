@@ -1,0 +1,20 @@
+app:
+  debug: true
+  environment: development
+
+vk:
+  api_url: https://api.vk.com/method
+  api_version: "5.87"
+  conn_timeout: 10
+  read_timeout: 10
+  img_type: "x"  # https://vk.com/dev/objects/photo_sizes
+
+cv:
+  url: http://tf-serving:8501/v1/models/resnet:predict
+  conn_timeout: 10
+  read_timeout: 10
+
+nlp:
+  url: http://pytorch-chatbot/reply
+  conn_timeout: 10
+  read_timeout: 10
