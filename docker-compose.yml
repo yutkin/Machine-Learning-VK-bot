@@ -2,54 +2,61 @@ version: '2.3'
 
 services:
   tf-serving:
-
-    # https://hub.docker.com/r/yutkin/tfserving/
-    image: yutkin/tfserving:resnet32
-
+    build: tf-serving
     runtime: nvidia
+    ipc: host
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
     networks:
-    - frontend
+    - front
 
   pytorch-chatbot:
-    build: ./pytorch_chatbot
+    build: pytorch-chatbot
+    # Uncomment to run service on additional GPU. Use CPU by default
+
+    # runtime: nvidia
+    # ipc: host
+    # environment:
+    # - NVIDIA_VISIBLE_DEVICES=1
+
     networks:
-      - frontend
+      - front
 
   vkbot:
     build: .
     command: supervisord -c /app/etc/supervisord.ini
     networks:
-      - frontend
+     - front
     environment:
-      - PYTHONASYNCIODEBUG=0
-      - VK_APP_SECRET
-      - VK_ACCESS_TOKEN
-      - SENTRY_DSN
+     - PYTHONASYNCIODEBUG=0
+     - VK_APP_SECRET
+     - VK_ACCESS_TOKEN
+     - SENTRY_DSN
     volumes:
-      - ./vkbot:/app/vkbot
-      - ./etc:/app/etc
-      - ./tests:/app/tests
-      - aiohttp-sockets:/var/lib/aiohttp
+     - ./vkbot:/app/vkbot
+     - ./etc:/app/etc
+     - ./tests:/app/tests
+     - aiohttp-sockets:/var/lib/aiohttp
     depends_on:
-      - tf-serving
-      - pytorch-chatbot
+     - tf-serving
+     - pytorch-chatbot
 
   nginx:
     image: nginx:latest
     ports:
-      - 80:80
+     - 80:80
     environment:
-      - TZ=Europe/Moscow
+     - TZ=Europe/Moscow
     networks:
-      - frontend
+     - front
     volumes:
-      - ./etc/nginx.conf:/etc/nginx/nginx.conf
-      - aiohttp-sockets:/var/lib/aiohttp
+     - ./etc/nginx.conf:/etc/nginx/nginx.conf
+     - aiohttp-sockets:/var/lib/aiohttp
     depends_on:
-      - vkbot
+     - vkbot
 
 networks:
-  frontend:
+  front:
 
 volumes:
   aiohttp-sockets:

@@ -28,7 +28,7 @@ class ChatBotConnector(BaseMLConnector):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
-    async def send_message(self, message):
+    async def send_message(self, message: str) -> Dict:
         payload = dict(message=message)
 
         async with self._sess.post(self._url, json=payload) as resp:
@@ -51,10 +51,14 @@ class ImageNetConnector(BaseMLConnector):
     def join_predictions_to_one_message(
         predictions: List[Dict], sep: str = "\n"
     ) -> str:
+        if len(predictions) == 1:
+            return IMAGENET_CLASSES[predictions[0]['classes'] - 1]
+
         class_names = [
             f"{i+1}. {IMAGENET_CLASSES[pred['classes'] - 1]}"
             for i, pred in enumerate(predictions)
         ]
+
         return sep.join(class_names)
 
 

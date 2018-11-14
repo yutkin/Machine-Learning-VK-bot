@@ -4,11 +4,14 @@ import vocab
 from cachetools import cached, TTLCache
 from cachetools.keys import hashkey
 
-device = torch.device("cpu")
+USE_CUDA = torch.cuda.is_available()
+device = torch.device("cuda" if USE_CUDA else "cpu")
+
+ONE_HOUR = 60 * 60
 
 
 # Lowercase and remove non-letter characters
-def normalizeString(s):
+def normalize_string(s):
     s = s.lower()
     s = re.sub(r"([.!?])", r" \1", s)
     s = re.sub(r"[^a-zA-Z.!?]+", r" ", s)
@@ -16,14 +19,14 @@ def normalizeString(s):
 
 
 # Takes string sentence, returns sentence of word indexes
-def indexesFromSentence(voc, sentence):
+def indexes_from_sentence(voc, sentence):
     return [voc.word2index[word] for word in sentence.split(" ")] + [vocab.EOS_token]
 
 
 def evaluate(encoder, decoder, searcher, voc, sentence, max_length=10):
     ### Format input sentence as a batch
     # words -> indexes
-    indexes_batch = [indexesFromSentence(voc, sentence)]
+    indexes_batch = [indexes_from_sentence(voc, sentence)]
     # Create lengths tensor
     lengths = torch.tensor([len(indexes) for indexes in indexes_batch])
     # Transpose dimensions of batch to match models' expectations
@@ -39,12 +42,12 @@ def evaluate(encoder, decoder, searcher, voc, sentence, max_length=10):
 
 
 @cached(
-    cache=TTLCache(maxsize=int(2**16 - 1), ttl=60*5),
-    key=lambda sent, enc, dec, sear, voc: tuple(hashkey(sent))
+    cache=TTLCache(maxsize=int(2 ** 15 - 1), ttl=24*ONE_HOUR),
+    key=lambda sent, enc, dec, sear, voc: tuple(hashkey(sent)),
 )
 def reply_on_sentence(sentence, encoder, decoder, searcher, voc):
     # Normalize sentence
-    input_sentence = normalizeString(sentence)
+    input_sentence = normalize_string(sentence)
     # Evaluate sentence
     output_words = evaluate(encoder, decoder, searcher, voc, input_sentence)
     output_words[:] = [x for x in output_words if not (x == "EOS" or x == "PAD")]
